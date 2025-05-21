@@ -1,0 +1,119 @@
+#define OFFSET 1.5
+
+
+float rib (
+	vector in_uv, 
+	float radius, 
+	float width, 
+	float angle
+){
+	vector uv = rotate(in_uv, angle, vector(0, 0, -1));
+	float width_mask = -step(width/2, abs(uv[1])) + 1;
+	float radius_mask = -step(radius, uv[0]) + 1;
+	return -(width_mask * radius_mask) + 1;
+}
+
+float rib_smooth (
+	vector in_uv, 
+	float radius, 
+	float width, 
+	float angle, 
+	float falloff
+){
+	vector uv = rotate(in_uv, angle, vector(0, 0, -1));
+	float corner_mask = step(width/2, abs(uv[0])) * step(radius, uv[1]);
+	float side_mask = -corner_mask + 1;
+	float width_mask = -linearstep(width/2, width/2 + falloff, abs(uv[0])) + 1;
+	float radius_mask = -linearstep(radius, radius + falloff, uv[1]) + 1;
+	vector left_vertex = vector(-width/2, radius, 0);
+	vector right_vertex = vector(width/2, radius, 0);
+	float left_corner = linearstep(0, falloff, clamp(distance(uv, left_vertex), 0, 1));
+	float right_corner = linearstep(0, falloff, clamp(distance(uv, right_vertex), 0, 1));
+	return min(left_corner, right_corner) * corner_mask + (-(width_mask * radius_mask) + 1) * side_mask;		
+} 
+
+float vector_to_angle_normalized (
+	vector A, vector B
+){
+	float dotp1 = dot(A, -B);
+	float det1 = A[0] * (-B[1]) - (-B[0]) * A[1];
+	float angle = atan2(det1, dotp1);
+	return (angle + M_PI) / M_2PI;
+}
+
+shader Ngon(
+	vector uv = 
+		vector (u, v, 0)
+		* OFFSET
+		- vector(0.5, 0.5, 0)
+		* OFFSET [[
+		string label = "UV",
+		string help = 
+			"<br>"
+			"default values are just to"
+			"<br>"
+			"be centered in the thumbnail"
+	]],
+	
+	int in_segment_count = 6 [[
+		string label = "Segment Count",
+		int connectable = 0,
+		int min = 3,
+		int max = 32,
+	]],
+	
+	int smoothstep_iterations = 1 [[
+		string label = "Smooth Step Iterations",
+		int connectable = 0,
+		int min = 0,
+		int max = 2,
+	]],
+	
+	float radius = .5[[
+		string label = "Radius",
+		int connectable = 0,
+		string help = "<br>in UV space"
+	]],
+	
+	float radius_tolerance = .1 [[
+		string label = "Tolerance",
+		int connectable = 0,
+		float min = 0.001,
+		string help = "<br>"
+			"cutoff point for the falloff that"
+			"<br>"
+			"generates the rounded corners"
+			"<br>"
+			"divided by 2"
+	]],
+	
+	float output_multyplier = 1 [[
+		string label = "Output Multiplyer",
+	]],
+	
+	output float Out = 0.0 [[
+		string label = "Output"
+	]]
+){	
+	float segment_count = float(in_segment_count);
+	float segment = floor(vector_to_angle_normalized(vector(0,1,0), uv) * segment_count);
+	float outer_radius = radius - radius_tolerance;
+	float falloff_distance = radius_tolerance * 2;
+	
+	float side_angle_offset = radians(180/segment_count);
+	float side_angle = side_angle_offset + radians(360/segment_count) * segment;
+	float inner_radius = outer_radius * cos(side_angle_offset);
+	float half_base =  outer_radius * sin(side_angle_offset);
+	float ngon = rib_smooth(uv, inner_radius, half_base * 2, side_angle, falloff_distance); 
+	
+	Out = -ngon + 1;
+	Out = Out * output_multyplier;
+	
+	//Out = clamp(Out, 0.25, 1.0) - 0.75;
+	//Out = Out * 4;
+	//Out = clamp(Out, 0, .1) * 10;
+	
+	for (int i = 1; i <= smoothstep_iterations; i++) {
+		Out = smoothstep(0, 1, Out);
+	}
+}
