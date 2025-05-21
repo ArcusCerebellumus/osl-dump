@@ -1,0 +1,92 @@
+struct hexp {
+    vector pt[7];
+    float  d[7];
+};
+
+struct maps {
+    vector centers;
+    vector tiles_centered;
+    vector tiles_normalized;
+};
+
+hexp make_hexp (vector origin, vector uv, float r) {
+    vector right =      vector(r, 0, 0);
+    vector right_up =   rotate(right, 60 * M_PI / 180, vector(0, 0, 1));
+    vector left_up =    vector(-right_up[0], right_up[1], 0);
+    vector left =       vector(-r, 0.0, 0.0);
+    vector left_down =  vector(-right_up[0], -right_up[1], 0);
+    vector right_down = vector(right_up[0], -right_up[1], 0);
+	
+    vector pt[7] = {
+        origin,
+        origin + right,
+        origin + right_up,
+        origin + left_up,
+        origin + left,
+        origin + left_down,
+        origin + right_down
+    };
+	
+    float d[7] = {
+        distance(uv, pt[0]),
+        distance(uv, pt[1]),
+        distance(uv, pt[2]),
+        distance(uv, pt[3]),
+        distance(uv, pt[4]),
+        distance(uv, pt[5]),
+        distance(uv, pt[6])
+    };
+	
+    return hexp (pt, d);
+}
+
+vector approximation (vector uv, float r) {
+    float x = uv[0];
+    float y = uv[1];
+
+    int x_whole = (int) trunc( x / (r / 2) );
+    if ( (x_whole & 1) == 1) { x_whole -= 1; }
+    x = x_whole * (r/2);
+
+    float vert_step = r * sin(60 * M_PI / 180);
+    int y_whole = (int) trunc(y / vert_step);
+    if (y_whole & 1 == 1) { y_whole += 1; }
+    y = y_whole * vert_step;
+
+    return vector(x, y, 0);
+}
+
+maps closest_on_hex (vector uv, float r) {
+    hexp steps = make_hexp(vector(0,0,0), uv, r);
+    hexp origin = make_hexp(approximation(uv, r), uv, r);
+
+    vector pick = origin.pt[0];
+    float  pick_dist = origin.d[0];
+    for (int i = 1; i <= arraylength(origin.d); i++) {
+        if (origin.d[i] < pick_dist) {
+            pick =  origin.pt[i];
+            pick_dist = origin.d[i];
+        }
+    }
+    return maps(pick, (uv - pick)/r, (uv - pick + steps.pt[2])/r);
+}
+
+shader HexPatternUVs(
+    vector Vector = vector (u, v, 0),
+    vector Offset = vector (0, 0, 0),
+    int row_capacity = 5,
+    output vector Tiles = vector(0,0,0)
+)
+{
+    float OuterRadius = 1.0 / row_capacity;
+    maps h = closest_on_hex(Vector - Offset, OuterRadius);
+
+    vector n = noise ("simplex", h.centers[0]*999, h.centers[1]*999);
+    vector uv_offset = vector (n[0], n[1], 0);
+    float rotation = n[2];
+
+    vector tiles_zoomed = h.tiles_centered * 0.1;
+    vector tiles_rotated = rotate(tiles_zoomed, rotation * 10, vector(0,0,1));
+	
+    Tiles = h.tiles_centered;
+}
