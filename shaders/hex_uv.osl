@@ -16,7 +16,7 @@ hexp make_hexp (vector origin, vector uv, float r) {
     vector left =       vector(-r, 0.0, 0.0);
     vector left_down =  vector(-right_up[0], -right_up[1], 0);
     vector right_down = vector(right_up[0], -right_up[1], 0);
-	
+
     vector pt[7] = {
         origin,
         origin + right,
@@ -26,7 +26,7 @@ hexp make_hexp (vector origin, vector uv, float r) {
         origin + left_down,
         origin + right_down
     };
-	
+
     float d[7] = {
         distance(uv, pt[0]),
         distance(uv, pt[1]),
@@ -36,7 +36,7 @@ hexp make_hexp (vector origin, vector uv, float r) {
         distance(uv, pt[5]),
         distance(uv, pt[6])
     };
-	
+
     return hexp (pt, d);
 }
 
@@ -87,6 +87,6 @@ shader HexPatternUVs(
 
     vector tiles_zoomed = h.tiles_centered * 0.1;
     vector tiles_rotated = rotate(tiles_zoomed, rotation * 10, vector(0,0,1));
-	
+
     Tiles = h.tiles_centered;
 }

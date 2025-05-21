@@ -7,7 +7,7 @@ color ral_to_lab(int hue, int lightness, int chroma) {
 
 
 float adjust_xyz(float input_coordinate, float lightness_ref) {
-	float out;
+    float out;
     if (pow(input_coordinate, 3) > 0.008856) {
         out = pow(input_coordinate, 3);
     } else {
@@ -18,117 +18,117 @@ float adjust_xyz(float input_coordinate, float lightness_ref) {
 
 
 color lab_to_xyz(color lab, vector xyz_ref) {
-	float y = (lab[0] + 16.0) / 116.0;
+    float y = (lab[0] + 16.0) / 116.0;
     float x = lab[1] / 500.0 + y;
     float z = y - lab[2] / 200.0;
 
     x = adjust_xyz(x, xyz_ref[0]);
     y = adjust_xyz(y, xyz_ref[1]);
     z = adjust_xyz(z, xyz_ref[2]);
-    
+
     return color(x, y, z);
 }
 
 
 shader RAL_Design [[
-	string label = "RAL Design",
+    string label = "RAL Design",
     string category = "Math Color",
     string version = "1.0",
     string help =
-    	"<br>"
-	    "RAL conversion from standard \" Design \" pattern"
-	    "<br>"
-	    "( for example, \" H 160 L 30 C 30 \" , i.e. \" Troll Green \" )"
-	    "<br>"
-	    "to linear RGB space"
-	    "<br>",
-]]
-(
-	int H = 160 [[
-		string label = "RAL H",
-	    int connectable = 0,
+        "<br>"
+        "RAL conversion from standard \" Design \" pattern"
+        "<br>"
+        "( for example, \" H 160 L 30 C 30 \" , i.e. \" Troll Green \" )"
+        "<br>"
+        "to linear RGB space"
+        "<br>",
+    ]]
+    (
+    int H = 160 [[
+        string label = "RAL H",
+        int connectable = 0,
         int min = 0,
         int max = 360,
-		string help = "Hue", 
+        string help = "Hue", 
     ]],
-    
-	int L = 30[[
-		string label = "RAL L",
-	    int connectable = 0,
+
+    int L = 30[[
+        string label = "RAL L",
+        int connectable = 0,
         int min = 0,
         int max = 100,
         string help = "Lightness",
     ]],
-    
-	int C = 30[[
-		string label = "RAL C",
-	    int connectable = 0,
+
+    int C = 30[[
+        string label = "RAL C",
+        int connectable = 0,
         int min = 0,
         int max = 100,
-	    string help = "Chromaticity",
+        string help = "Chromaticity",
     ]],
-    
+
     int invert_gamma = 0[[
-    	string label = "Invert Gamma",
+        string label = "Invert Gamma",
         string widget = "checkBox",
-	    int connectable = 0,
-	    string help =
-	    	"<br>"
-    	    "makes gamma multiplication *G/2.2"
-    	    "<br>"
-    	    "instead of just *G",
+        int connectable = 0,
+        string help =
+            "<br>"
+            "makes gamma multiplication *G/2.2"
+            "<br>"
+            "instead of just *G",
     ]],
-    
+
     int google_gamma = 0[[
-    	string label = "Make it look more like what I see on Google",
+        string label = "Make it look more like what I see on Google",
         string widget = "checkBox",
-	    int connectable = 0,
-	    string help = 
-	        "<br>"
-	        "Additional gamma of 0.8"
-	        "<br>"
-	        "because reference images from the"
-	        "<br>"
-	        "internet !!!SEEM!!! more acurate that way"
+        int connectable = 0,
+        string help = 
+            "<br>"
+            "Additional gamma of 0.8"
+            "<br>"
+            "because reference images from the"
+            "<br>"
+            "internet !!!SEEM!!! more acurate that way"
     ]],
-    
+
     float gamma = 1.0 [[
-	    string label = "Gamma",
-	    int connectable = 0,
-    	string help = 
-    	    "<br>"
-    	    "Additional user contolled gamma correction",
+        string label = "Gamma",
+        int connectable = 0,
+        string help = 
+            "<br>"
+            "Additional user contolled gamma correction",
     ]],
-    
+
     vector xyz_reference_values = vector(96.047, 100.00, 100.883)[[
-    	string label = "XYZ Shift",
-	    int connectable = 0,
-		string help = 
-		    "<br>"
-		    "You shouldn't touch this, really..."
-		    "<br>"
-		    "even I don't want to.",
+        string label = "XYZ Shift",
+        int connectable = 0,
+        string help = 
+            "<br>"
+            "You shouldn't touch this, really..."
+            "<br>"
+            "even I don't want to.",
     ]],
-    
-	output color RGB = 0.0
+
+    output color RGB = 0.0
 )
 {
-	RGB = 
-		// manual conversion turned out to be busted, so use built-in function instead
-		transformc(
-	        "XYZ",
-	        "rgb",
-	        lab_to_xyz(
-	        	// this is straight from https://en.wikipedia.org/wiki/RAL_colour_standard
-	            ral_to_lab(H, L, C),
-	            // some reference values for CIELAB conversion that I don't really understand
-	            xyz_reference_values
-	        )
-	    )
-	    // no-branch conditional for "Make it look like what I see on Google"
-	    * (1.0 - 0.2 * google_gamma)
-	    // no-branch conditional "Invert Gamma"
-	    * ((gamma/2.2*invert_gamma) + (gamma*!invert_gamma))
-	;
-	//RGB = clamp(RGB, vector(0,0,0), vector(1,1,1));
+    RGB =
+        // manual conversion turned out to be busted, so use built-in function instead
+        transformc(
+            "XYZ",
+            "rgb",
+            lab_to_xyz(
+                // this is straight from https://en.wikipedia.org/wiki/RAL_colour_standard
+                ral_to_lab(H, L, C),
+                // some reference values for CIELAB conversion that I don't really understand
+                xyz_reference_values
+            )
+        )
+        // no-branch conditional for "Make it look like what I see on Google"
+        * (1.0 - 0.2 * google_gamma)
+        // no-branch conditional "Invert Gamma"
+        * ((gamma/2.2*invert_gamma) + (gamma*!invert_gamma))
+    ;
+    //RGB = clamp(RGB, vector(0,0,0), vector(1,1,1));
 }
